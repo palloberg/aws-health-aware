@@ -101,22 +101,33 @@ def get_message_for_eventbridge(event_details, event_type):
     print("SHD Message generated for EventBridge : ", message)
     return message
 
-def get_org_message_for_eventbridge(event_details, event_type, affected_org_accounts, affected_org_entities):
+def get_accounts_with_name(affected_org_accounts, org_account_names=()):
+    if len(affected_org_accounts) < 1:
+        return "All accounts in region"
+
+    acctlist = []
+    for acct in affected_org_accounts:
+        if acct in org_account_names:
+            acctlist.append(org_account_names[acct] + " (" + acct + ")")
+        else:
+            acctlist.append(acct)
+
+    return "\n".join(acctlist)
+
+
+def get_org_message_for_eventbridge(event_details, event_type, affected_org_accounts, affected_org_entities, org_account_names=()):
     message = ""
     if len(affected_org_entities) >= 1:
         affected_org_entities = "\n".join(affected_org_entities)
     else:
         affected_org_entities = "All resources\nin region"
-    if len(affected_org_accounts) >= 1:
-        affected_org_accounts = "\n".join(affected_org_accounts)
-    else:
-        affected_org_accounts = "All accounts\nin region"
+
     if event_type == "create":
         message = {
             "attachments": [
                 {
                         "fields": [
-                            { "title": "Account(s)", "value": affected_org_accounts, "short": True },
+                            { "title": "Account(s)", "value": get_accounts_with_name(affected_org_accounts, org_account_names), "short": True },
                             { "title": "Resource(s)", "value": affected_org_entities, "short": True },
                             { "title": "Service", "value": event_details['successfulSet'][0]['event']['service'], "short": True },
                             { "title": "Region", "value": event_details['successfulSet'][0]['event']['region'], "short": True },
@@ -134,7 +145,7 @@ def get_org_message_for_eventbridge(event_details, event_type, affected_org_acco
             "attachments": [
                 {
                         "fields": [
-                            { "title": "Account(s)", "value": affected_org_accounts, "short": True },
+                            { "title": "Account(s)", "value":  get_accounts_with_name(affected_org_accounts, org_account_names), "short": True },
                             { "title": "Resource(s)", "value": affected_org_entities, "short": True },
                             { "title": "Service", "value": event_details['successfulSet'][0]['event']['service'], "short": True },
                             { "title": "Region", "value": event_details['successfulSet'][0]['event']['region'], "short": True },
@@ -152,17 +163,14 @@ def get_org_message_for_eventbridge(event_details, event_type, affected_org_acco
     return message
 
 
-def get_org_message_for_slack(event_details, event_type, affected_org_accounts, affected_org_entities):
+def get_org_message_for_slack(event_details, event_type, affected_org_accounts, affected_org_entities, org_account_names=()):
     message = ""
     summary = ""
     if len(affected_org_entities) >= 1:
         affected_org_entities = "\n".join(affected_org_entities)
     else:
         affected_org_entities = "All resources\nin region"
-    if len(affected_org_accounts) >= 1:
-        affected_org_accounts = "\n".join(affected_org_accounts)
-    else:
-        affected_org_accounts = "All accounts\nin region"
+
     if event_type == "create":
         summary += (
             f":rotating_light:*[NEW] AWS Health reported an issue with the {event_details['successfulSet'][0]['event']['service'].upper()} service in "
@@ -174,7 +182,7 @@ def get_org_message_for_slack(event_details, event_type, affected_org_accounts, 
                 {
                     "color": "danger",
                         "fields": [
-                            { "title": "Account(s)", "value": affected_org_accounts, "short": True },
+                            { "title": "Account(s)", "value":  get_accounts_with_name(affected_org_accounts, org_account_names), "short": True },
                             { "title": "Resource(s)", "value": affected_org_entities, "short": True },
                             { "title": "Service", "value": event_details['successfulSet'][0]['event']['service'], "short": True },
                             { "title": "Region", "value": event_details['successfulSet'][0]['event']['region'], "short": True },
@@ -198,7 +206,7 @@ def get_org_message_for_slack(event_details, event_type, affected_org_accounts, 
                 {
                     "color": "00ff00",
                         "fields": [
-                            { "title": "Account(s)", "value": affected_org_accounts, "short": True },
+                            { "title": "Account(s)", "value":  get_accounts_with_name(affected_org_accounts, org_account_names), "short": True },
                             { "title": "Resource(s)", "value": affected_org_entities, "short": True },
                             { "title": "Service", "value": event_details['successfulSet'][0]['event']['service'], "short": True },
                             { "title": "Region", "value": event_details['successfulSet'][0]['event']['region'], "short": True },
@@ -252,22 +260,19 @@ def get_message_for_chime(event_details, event_type):
     return message
 
 
-def get_org_message_for_chime(event_details, event_type, affected_org_accounts, affected_org_entities):
+def get_org_message_for_chime(event_details, event_type, affected_org_accounts, affected_org_entities, org_account_names=()):
     message = ""
     summary = ""
     if len(affected_org_entities) >= 1:
         affected_org_entities = "\n".join(affected_org_entities)
     else:
         affected_org_entities = "All resources in region"
-    if len(affected_org_accounts) >= 1:
-        affected_org_accounts = "\n".join(affected_org_accounts)
-    else:
-        affected_org_accounts = "All accounts in region"
+
     if event_type == "create":
         
         message = str("/md" + "\n" + "**:rotating_light:\[NEW\] AWS Health reported an issue with the " + event_details['successfulSet'][0]['event']['service'].upper()) +  " service in " + str(event_details['successfulSet'][0]['event']['region'].upper() + " region**" + "\n"
           "---" + "\n"
-          "**Account(s)**: " + affected_org_accounts + "\n"
+          "**Account(s)**: " +  get_accounts_with_name(affected_org_accounts, org_account_names) + "\n"
           "**Resource(s)**: " + affected_org_entities + "\n"
           "**Service**: " + event_details['successfulSet'][0]['event']['service'] + "\n"
           "**Region**: " + event_details['successfulSet'][0]['event']['region'] + "\n" 
@@ -281,7 +286,7 @@ def get_org_message_for_chime(event_details, event_type, affected_org_accounts, 
 
         message = str("/md" + "\n" + "**:heavy_check_mark:\[RESOLVED\] The AWS Health issue with the " + event_details['successfulSet'][0]['event']['service'].upper()) +  " service in " + str(event_details['successfulSet'][0]['event']['region'].upper() + " region is now resolved.**" + "\n"
           "---" + "\n"
-          "**Account(s)**: " + affected_org_accounts + "\n"
+          "**Account(s)**: " +  get_accounts_with_name(affected_org_accounts, org_account_names) + "\n"
           "**Resource(s)**: " + affected_org_entities + "\n"
           "**Service**: " + event_details['successfulSet'][0]['event']['service'] + "\n"
           "**Region**: " + event_details['successfulSet'][0]['event']['region'] + "\n" 
@@ -357,17 +362,14 @@ def get_message_for_teams(event_details, event_type):
     return message
 
 
-def get_org_message_for_teams(event_details, event_type, affected_org_accounts, affected_org_entities):
+def get_org_message_for_teams(event_details, event_type, affected_org_accounts, affected_org_entities, org_account_names=()):
     message = ""
     summary = ""
     if len(affected_org_entities) >= 1:
         affected_org_entities = "\n".join(affected_org_entities)
     else:
         affected_org_entities = "All resources in region"
-    if len(affected_org_accounts) >= 1:
-        affected_org_accounts = "\n".join(affected_org_accounts)
-    else:
-        affected_org_accounts = "All accounts in region"
+
     if event_type == "create":
         title = "&#x1F6A8; [NEW] AWS Health reported an issue with the " + event_details['successfulSet'][0]['event'][
             'service'].upper() + " service in the " + event_details['successfulSet'][0]['event'][
@@ -382,7 +384,7 @@ def get_org_message_for_teams(event_details, event_type, affected_org_accounts, 
                     "activityTitle": title,
                     "markdown": False,
                     "facts": [
-                        {"name": "Account(s)", "value": affected_org_accounts},
+                        {"name": "Account(s)", "value":  get_accounts_with_name(affected_org_accounts, org_account_names)},
                         {"name": "Resource(s)", "value": affected_org_entities},
                         {"name": "Service", "value": event_details['successfulSet'][0]['event']['service']},
                         {"name": "Region", "value": event_details['successfulSet'][0]['event']['region']},
@@ -409,7 +411,7 @@ def get_org_message_for_teams(event_details, event_type, affected_org_accounts, 
                     "activityTitle": title,
                     "markdown": False,
                     "facts": [
-                        {"name": "Account(s)", "value": affected_org_accounts},
+                        {"name": "Account(s)", "value":  get_accounts_with_name(affected_org_accounts, org_account_names)},
                         {"name": "Resource(s)", "value": affected_org_entities},
                         {"name": "Service", "value": event_details['successfulSet'][0]['event']['service']},
                         {"name": "Region", "value": event_details['successfulSet'][0]['event']['region']},
@@ -474,22 +476,20 @@ def get_message_for_email(event_details, event_type):
     return BODY_HTML
 
 
-def get_org_message_for_email(event_details, event_type, affected_org_accounts, affected_org_entities):
+def get_org_message_for_email(event_details, event_type, affected_org_accounts, affected_org_entities, org_account_names=()):
     if len(affected_org_entities) >= 1:
         affected_org_entities = "\n".join(affected_org_entities)
     else:
         affected_org_entities = "All servicess related resources in region"
-    if len(affected_org_accounts) >= 1:
-        affected_org_accounts = "\n".join(affected_org_accounts)
-    else:
-        affected_org_accounts = "All accounts in region"
+
+    affected_accounts =  get_accounts_with_name(affected_org_accounts, org_account_names)
     if event_type == "create":
         BODY_HTML = f"""
         <html>
             <body>
                 <h>Greetings from AWS Health Aware,</h><br>
                 <p>There is an AWS incident that is in effect which may likely impact your resources. Here are the details:<br><br>
-                <b>Account(s):</b> {affected_org_accounts}<br>
+                <b>Account(s):</b> {affected_accounts}<br>
                 <b>Resource(s):</b> {affected_org_entities}<br>
                 <b>Service:</b> {event_details['successfulSet'][0]['event']['service']}<br>
                 <b>Region:</b> {event_details['successfulSet'][0]['event']['region']}<br>
@@ -510,7 +510,7 @@ def get_org_message_for_email(event_details, event_type, affected_org_accounts, 
             <body>
                 <h>Greetings again from AWS Health Aware,</h><br>
                 <p>Good news! The AWS Health incident from earlier has now been marked as resolved.<br><br>
-                <b>Account(s):</b> {affected_org_accounts}<br>
+                <b>Account(s):</b> {affected_accounts}<br>
                 <b>Resource(s):</b> {affected_org_entities}<br>                            
                 <b>Service:</b> {event_details['successfulSet'][0]['event']['service']}<br>
                 <b>Region:</b> {event_details['successfulSet'][0]['event']['region']}<br>

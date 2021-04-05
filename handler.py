@@ -16,7 +16,7 @@ from boto3.dynamodb.conditions import Key, Attr
 from messagegenerator import get_message_for_slack, get_org_message_for_slack, get_message_for_chime, \
     get_org_message_for_chime, \
     get_message_for_teams, get_org_message_for_teams, get_message_for_email, get_org_message_for_email, \
-    get_org_message_for_eventbridge, get_message_for_eventbridge
+    get_org_message_for_eventbridge, get_message_for_eventbridge, get_accounts_with_name
 
 # query active health API endpoint
 health_dns = socket.gethostbyname_ex('global.health.amazonaws.com')
@@ -35,14 +35,17 @@ config = Config(
     )
 )
 health_client = boto3.client('health', config=config)
+org_client = boto3.client('organizations', config=config)
+
+SECRETS = ()
 
 def send_alert(event_details, event_type):
-    slack_url = get_secrets()["slack"]
-    teams_url = get_secrets()["teams"]
-    chime_url = get_secrets()["chime"]
+    slack_url = SECRETS["slack"]
+    teams_url = SECRETS["teams"]
+    chime_url = SECRETS["chime"]
     SENDER = os.environ['FROM_EMAIL']
     RECIPIENT = os.environ['TO_EMAIL']
-    event_bus_name = get_secrets()["eventbusname"]
+    event_bus_name = SECRETS["eventbusname"]
 
     if "None" not in event_bus_name:
         try:
@@ -91,20 +94,20 @@ def send_alert(event_details, event_type):
             print("Server connection failed: ", e.reason)
             pass
 
-def send_org_alert(event_details, affected_org_accounts, affected_org_entities, event_type):
-    slack_url = get_secrets()["slack"]
-    teams_url = get_secrets()["teams"]
-    chime_url = get_secrets()["chime"]
+def send_org_alert(event_details, affected_org_accounts, affected_org_entities, event_type="unknown", org_account_names=()):
+    slack_url = SECRETS["slack"]
+    teams_url = SECRETS["teams"]
+    chime_url = SECRETS["chime"]
     SENDER = os.environ['FROM_EMAIL']
     RECIPIENT = os.environ['TO_EMAIL']
-    event_bus_name = get_secrets()["eventbusname"]
+    event_bus_name = SECRETS["eventbusname"]
 
     if "None" not in event_bus_name:
         try:
             print("Sending the org alert to Event Bridge")
             send_to_eventbridge(
                 get_org_message_for_eventbridge(event_details, event_type, affected_org_accounts,
-                                                affected_org_entities),
+                                                affected_org_entities, org_account_names),
                 event_type, event_bus_name)
         except HTTPError as e:
             print("Got an error while sending message to EventBridge: ", e.code, e.reason)
@@ -115,7 +118,7 @@ def send_org_alert(event_details, affected_org_accounts, affected_org_entities, 
         try:
             print("Sending the alert to Slack Channel")
             send_to_slack(
-                get_org_message_for_slack(event_details, event_type, affected_org_accounts, affected_org_entities),
+                get_org_message_for_slack(event_details, event_type, affected_org_accounts, affected_org_entities, org_account_names),
                 slack_url)
         except HTTPError as e:
             print("Got an error while sending message to Slack: ", e.code, e.reason)
@@ -126,7 +129,7 @@ def send_org_alert(event_details, affected_org_accounts, affected_org_entities, 
         try:
             print("Sending the alert to Teams")
             send_to_teams(
-                get_org_message_for_teams(event_details, event_type, affected_org_accounts, affected_org_entities),
+                get_org_message_for_teams(event_details, event_type, affected_org_accounts, affected_org_entities, org_account_names),
                 teams_url)
         except HTTPError as e:
             print("Got an error while sending message to Teams: ", e.code, e.reason)
@@ -137,7 +140,7 @@ def send_org_alert(event_details, affected_org_accounts, affected_org_entities, 
     if "none@domain.com" not in SENDER and RECIPIENT:
         try:
             print("Sending the alert to the emails")
-            send_org_email(event_details, event_type, affected_org_accounts, affected_org_entities)
+            send_org_email(event_details, event_type, affected_org_accounts, affected_org_entities, org_account_names)
         except HTTPError as e:
             print("Got an error while sending message to Email: ", e.code, e.reason)
         except URLError as e:
@@ -147,7 +150,7 @@ def send_org_alert(event_details, affected_org_accounts, affected_org_entities, 
         try:
             print("Sending the alert to Chime channel")
             send_to_chime(
-                get_org_message_for_chime(event_details, event_type, affected_org_accounts, affected_org_entities),
+                get_org_message_for_chime(event_details, event_type, affected_org_accounts, affected_org_entities, org_account_names),
                 chime_url)
         except HTTPError as e:
             print("Got an error while sending message to Chime: ", e.code, e.reason)
@@ -222,13 +225,24 @@ def send_email(event_details, eventType):
     )
 
 
-def send_org_email(event_details, eventType, affected_org_accounts, affected_org_entities):
+def send_org_email(event_details, eventType, affected_org_accounts, affected_org_entities, org_account_names=()):
     SENDER = os.environ['FROM_EMAIL']
     RECIPIENT = os.environ['TO_EMAIL'].split(",")
     #AWS_REGION = "us-east-1"
     AWS_REGION = os.environ['AWS_REGION']
     SUBJECT = os.environ['EMAIL_SUBJECT']
-    BODY_HTML = get_org_message_for_email(event_details, eventType, affected_org_accounts, affected_org_entities)
+    BODY_HTML = get_org_message_for_email(event_details, eventType, affected_org_accounts, affected_org_entities, org_account_names)
+
+    SUBJECT_REGION = event_details['successfulSet'][0]['event']['region']
+    if len(affected_org_entities) >= 1:
+        SUBJECT_ENTITIES = ", ".join(affected_org_entities)
+    else:
+        SUBJECT_ENTITIES = "all related resources"
+    if len(affected_org_accounts) >= 1:
+        SUBJECT_ACCOUNTS = get_accounts_with_name(affected_org_accounts, org_account_names)
+    else:
+        SUBJECT_ACCOUNTS = "all accounts"
+
     client = boto3.client('ses', region_name=AWS_REGION)
     response = client.send_email(
         Source=SENDER,
@@ -243,7 +257,7 @@ def send_org_email(event_details, eventType, affected_org_accounts, affected_org
             },
             'Subject': {
                 'Charset': 'UTF-8',
-                'Data': SUBJECT,
+                'Data': SUBJECT.format(region = SUBJECT_REGION, entities = SUBJECT_ENTITIES, accounts = SUBJECT_ACCOUNTS)
             },
         },
     )
@@ -289,7 +303,7 @@ def get_health_org_entities(health_client, event, event_arn, affected_org_accoun
 
 
 # For Customers using AWS Organizations
-def update_org_ddb(event_arn, str_update, status_code, event_details, affected_org_accounts, affected_org_entities):
+def update_org_ddb(event_arn, str_update, status_code, event_details, affected_org_accounts, affected_org_entities, org_account_names=()):
     # open dynamoDB
     dynamodb = boto3.resource("dynamodb")
     ddb_table = os.environ['DYNAMODB_TABLE']
@@ -299,6 +313,10 @@ def update_org_ddb(event_arn, str_update, status_code, event_details, affected_o
     delta_hours = os.environ['EVENT_SEARCH_BACK']
     delta_hours = int(delta_hours)
     delta_hours_sec = delta_hours * 3600
+
+    # Extend TTL 30 days for open events
+    if status_code != "closed":
+        delta_hours_sec += 86400 * 30;
 
     # formatting time in seconds
     srt_ddb_format_full = "%Y-%m-%d %H:%M:%S"
@@ -316,8 +334,11 @@ def update_org_ddb(event_arn, str_update, status_code, event_details, affected_o
         print(e.response['Error']['Message'])
     else:
         is_item_response = response.get('Item')
+
+        # New event not in DDB
         if is_item_response == None:
             print(datetime.now().strftime(srt_ddb_format_full) + ": record not found")
+
             # write to dynamodb
             response = aha_ddb_table.put_item(
                 Item={
@@ -333,16 +354,18 @@ def update_org_ddb(event_arn, str_update, status_code, event_details, affected_o
             )
             # send to configured endpoints
             if status_code != "closed":
-                send_org_alert(event_details, affected_org_accounts, affected_org_entities, event_type="create")
+                send_org_alert(event_details, affected_org_accounts, affected_org_entities, event_type="create", org_account_names=org_account_names)
             else:
-                send_org_alert(event_details, affected_org_accounts, affected_org_entities, event_type="resolve")
+                send_org_alert(event_details, affected_org_accounts, affected_org_entities, event_type="resolve", org_account_names=org_account_names)
 
+        # Existing event in DDB
         else:
             item = response['Item']
             if item['lastUpdatedTime'] != str_update and (item['statusCode'] != status_code or
                                                           item['latestDescription'] != event_latestDescription or
                                                           item['affectedAccountIDs'] != affected_org_accounts):
                 print(datetime.now().strftime(srt_ddb_format_full) + ": last Update is different")
+
                 # write to dynamodb
                 response = aha_ddb_table.put_item(
                     Item={
@@ -358,9 +381,9 @@ def update_org_ddb(event_arn, str_update, status_code, event_details, affected_o
                 )
                 # send to configured endpoints
                 if status_code != "closed":
-                    send_org_alert(event_details, affected_org_accounts, affected_org_entities, event_type="create")
+                    send_org_alert(event_details, affected_org_accounts, affected_org_entities, event_type="create", org_account_names=org_account_names)
                 else:
-                    send_org_alert(event_details, affected_org_accounts, affected_org_entities, event_type="resolve")
+                    send_org_alert(event_details, affected_org_accounts, affected_org_entities, event_type="resolve", org_account_names=org_account_names)
             else:
                 print("No new updates found, checking again in 1 minute.")
 
@@ -376,6 +399,10 @@ def update_ddb(event_arn, str_update, status_code, event_details):
     delta_hours = os.environ['EVENT_SEARCH_BACK']
     delta_hours = int(delta_hours)
     delta_hours_sec = delta_hours * 3600
+
+    # Extend TTL 30 days for open events
+    if status_code != "closed":
+        delta_hours_sec += 86400 * 30;
 
     # formatting time in seconds
     srt_ddb_format_full = "%Y-%m-%d %H:%M:%S"
@@ -436,7 +463,7 @@ def update_ddb(event_arn, str_update, status_code, event_details):
 
 def get_secrets():
     secret_teams_name = "MicrosoftChannelID"
-    secret_slack_name = "SlackChannelID"
+    secret_slack_name = "AHASlackChannelHook"
     secret_chime_name = "ChimeChannelID"
     region_name = os.environ['AWS_REGION']
     get_secret_value_response_eventbus = ""
@@ -445,12 +472,17 @@ def get_secrets():
     get_secret_value_response_slack = ""
     event_bus_name = "EventBusName"
 
+    teams_channel_id = "None"
+    eventbus_channel_id = "None"
+    chime_channel_id = "None"
+
     # create a Secrets Manager client
     session = boto3.session.Session()
     client = session.client(
         service_name='secretsmanager',
         region_name=region_name
     )
+
     # Iteration through the configured AWS Secrets
     try:
         get_secret_value_response_teams = client.get_secret_value(
@@ -460,7 +492,7 @@ def get_secrets():
         if e.response['Error']['Code'] == 'AccessDeniedException':
             print("No AWS Secret configured for Teams, skipping")
             teams_channel_id = "None"
-        else: 
+        else:
             print("There was an error with the Teams secret: ",e.response)
             teams_channel_id = "None"
     finally:
@@ -476,7 +508,7 @@ def get_secrets():
         if e.response['Error']['Code'] == 'AccessDeniedException':
             print("No AWS Secret configured for Slack, skipping")
             slack_channel_id = "None"
-        else:    
+        else:
             print("There was an error with the Slack secret: ",e.response)
             slack_channel_id = "None"
     finally:
@@ -492,7 +524,7 @@ def get_secrets():
         if e.response['Error']['Code'] == 'AccessDeniedException':
             print("No AWS Secret configured for Chime, skipping")
             chime_channel_id = "None"
-        else:    
+        else:
             print("There was an error with the Chime secret: ",e.response)
             chime_channel_id = "None"
     finally:
@@ -508,20 +540,20 @@ def get_secrets():
         if e.response['Error']['Code'] == 'AccessDeniedException':
             print("No AWS Secret configured for EventBridge, skipping")
             eventbus_channel_id = "None"
-        else:    
+        else:
             print("There was an error with the EventBridge secret: ",e.response)
             eventbus_channel_id = "None"
     finally:
         if 'SecretString' in get_secret_value_response_eventbus:
             eventbus_channel_id = get_secret_value_response_eventbus['SecretString']
         else:
-            eventbus_channel_id = "None"            
-        secrets = {
+            eventbus_channel_id = "None"
+
+    secrets = {
             "teams": teams_channel_id,
             "slack": slack_channel_id,
             "chime": chime_channel_id,
             "eventbusname": eventbus_channel_id}
-        print("Secrets: ",secrets)    
     return secrets
 
 
@@ -539,7 +571,7 @@ def describe_events():
             {
                 'from': time_delta
             }
-        ]    
+        ]
     }
 
     if health_event_type == "issue":
@@ -630,9 +662,21 @@ def send_to_eventbridge(message, event_type, event_bus):
          'EventBusName': event_bus}, ])
     print("Response is:", response)
 
+def describe_org_accounts():
+    account_list = {}
+
+    paginator = org_client.get_paginator('list_accounts')
+    account_iterator = paginator.paginate()
+
+    for accounts_itr in account_iterator:
+        for account in accounts_itr['Accounts']:
+            if account['Status'] == 'ACTIVE':
+               account_list[ account['Id'] ] = account['Name']
+
+    print("Accounts: ", json.dumps(account_list))
+    return account_list
 
 def main(event, context):
-    print("THANK YOU FOR CHOOSING AWS HEALTH AWARE!")
     org_status = os.environ['ORG_STATUS']
     str_ddb_format_sec = '%s'
 
@@ -667,6 +711,7 @@ def main(event, context):
     else:
         print(
             "AWS Organizations is enabled. Personal Health Dashboard and Service Health Dashboard messages will be alerted.")
+        org_account_names = describe_org_accounts()
         aws_events = describe_org_events()
         aws_events = json.dumps(aws_events, default=myconverter)
         aws_events = json.loads(aws_events)
@@ -695,10 +740,11 @@ def main(event, context):
                 else:
                     # write to dynamoDB for persistence
                     update_org_ddb(event_arn, str_update, status_code, event_details, affected_org_accounts,
-                                   affected_org_entities)
+                                   affected_org_entities, org_account_names)
         else:
             print("No events found in time frame, checking again in 1 minute.")
 
 
 if __name__ == "__main__":
+    SECRETS = get_secrets()
     main('', '')
