@@ -23,7 +23,7 @@ health_dns = socket.gethostbyname_ex('global.health.amazonaws.com')
 (current_endpoint, global_endpoint, ip_endpoint) = health_dns
 health_active_list = current_endpoint.split('.')
 health_active_region = health_active_list[1]
-print("current health region: ", health_active_region)
+print("Current health region: ", health_active_region)
 
 # create a boto3 health client w/ backoff/retry
 config = Config(
@@ -37,15 +37,13 @@ config = Config(
 health_client = boto3.client('health', config=config)
 org_client = boto3.client('organizations', config=config)
 
-SECRETS = ()
-
-def send_alert(event_details, event_type):
-    slack_url = SECRETS["slack"]
-    teams_url = SECRETS["teams"]
-    chime_url = SECRETS["chime"]
+def send_alert(event_details, event_type, secrets={}):
+    slack_url = secrets.get('slack')
+    teams_url = secrets.get('teams')
+    chime_url = secrets.get('chime')
     SENDER = os.environ['FROM_EMAIL']
     RECIPIENT = os.environ['TO_EMAIL']
-    event_bus_name = SECRETS["eventbusname"]
+    event_bus_name = secrets.get('eventbusname')
 
     if "None" not in event_bus_name:
         try:
@@ -94,13 +92,13 @@ def send_alert(event_details, event_type):
             print("Server connection failed: ", e.reason)
             pass
 
-def send_org_alert(event_details, affected_org_accounts, affected_org_entities, event_type="unknown", org_account_names=()):
-    slack_url = SECRETS["slack"]
-    teams_url = SECRETS["teams"]
-    chime_url = SECRETS["chime"]
+def send_org_alert(event_details, affected_org_accounts, affected_org_entities, event_type="unknown", org_account_names={}, secrets={}):
+    slack_url = secrets.get('slack')
+    teams_url = secrets.get('teams')
+    chime_url = secrets.get('chime')
     SENDER = os.environ['FROM_EMAIL']
     RECIPIENT = os.environ['TO_EMAIL']
-    event_bus_name = SECRETS["eventbusname"]
+    event_bus_name = secrets.get('eventbusname')
 
     if "None" not in event_bus_name:
         try:
@@ -225,7 +223,7 @@ def send_email(event_details, eventType):
     )
 
 
-def send_org_email(event_details, eventType, affected_org_accounts, affected_org_entities, org_account_names=()):
+def send_org_email(event_details, eventType, affected_org_accounts, affected_org_entities, org_account_names={}):
     SENDER = os.environ['FROM_EMAIL']
     RECIPIENT = os.environ['TO_EMAIL'].split(",")
     #AWS_REGION = "us-east-1"
@@ -303,7 +301,7 @@ def get_health_org_entities(health_client, event, event_arn, affected_org_accoun
 
 
 # For Customers using AWS Organizations
-def update_org_ddb(event_arn, str_update, status_code, event_details, affected_org_accounts, affected_org_entities, org_account_names=()):
+def update_org_ddb(event_arn, str_update, status_code, event_details, affected_org_accounts, affected_org_entities, org_account_names={}, secrets={}):
     # open dynamoDB
     dynamodb = boto3.resource("dynamodb")
     ddb_table = os.environ['DYNAMODB_TABLE']
@@ -354,9 +352,9 @@ def update_org_ddb(event_arn, str_update, status_code, event_details, affected_o
             )
             # send to configured endpoints
             if status_code != "closed":
-                send_org_alert(event_details, affected_org_accounts, affected_org_entities, event_type="create", org_account_names=org_account_names)
+                send_org_alert(event_details, affected_org_accounts, affected_org_entities, event_type="create", org_account_names=org_account_names, secrets=secrets)
             else:
-                send_org_alert(event_details, affected_org_accounts, affected_org_entities, event_type="resolve", org_account_names=org_account_names)
+                send_org_alert(event_details, affected_org_accounts, affected_org_entities, event_type="resolve", org_account_names=org_account_names, secrets=secrets)
 
         # Existing event in DDB
         else:
@@ -381,15 +379,15 @@ def update_org_ddb(event_arn, str_update, status_code, event_details, affected_o
                 )
                 # send to configured endpoints
                 if status_code != "closed":
-                    send_org_alert(event_details, affected_org_accounts, affected_org_entities, event_type="create", org_account_names=org_account_names)
+                    send_org_alert(event_details, affected_org_accounts, affected_org_entities, event_type="create", org_account_names=org_account_names, secrets=secrets)
                 else:
-                    send_org_alert(event_details, affected_org_accounts, affected_org_entities, event_type="resolve", org_account_names=org_account_names)
+                    send_org_alert(event_details, affected_org_accounts, affected_org_entities, event_type="resolve", org_account_names=org_account_names, secrets=secrets)
             else:
                 print("No new updates found, checking again in 1 minute.")
 
 
 # For Customers not using AWS Organizations
-def update_ddb(event_arn, str_update, status_code, event_details):
+def update_ddb(event_arn, str_update, status_code, event_details, secrets={}):
     # open dynamoDB
     dynamodb = boto3.resource("dynamodb")
     ddb_table = os.environ['DYNAMODB_TABLE']
@@ -434,9 +432,9 @@ def update_ddb(event_arn, str_update, status_code, event_details):
             )
             # send to configured endpoints
             if status_code != "closed":
-                send_alert(event_details, event_type="create")
+                send_alert(event_details, event_type="create", secrets=secrets)
             else:
-                send_alert(event_details, event_type="resolve")
+                send_alert(event_details, event_type="resolve", secrets=secrets)
 
         else:
             item = response['Item']
@@ -454,9 +452,9 @@ def update_ddb(event_arn, str_update, status_code, event_details):
                 )
                 # send to configured endpoints
                 if status_code != "closed":
-                    send_alert(event_details, event_type="create")
+                    send_alert(event_details, event_type="create", secrets=secrets)
                 else:
-                    send_alert(event_details, event_type="resolve")
+                    send_alert(event_details, event_type="resolve", secrets=secrets)
             else:
                 print("No new updates found, checking again in 1 minute.")
 
@@ -677,6 +675,8 @@ def describe_org_accounts():
     return account_list
 
 def main(event, context):
+    secrets = get_secrets()
+
     org_status = os.environ['ORG_STATUS']
     str_ddb_format_sec = '%s'
 
@@ -705,7 +705,7 @@ def main(event, context):
                     continue
                 else:
                     # write to dynamoDB for persistence
-                    update_ddb(event_arn, str_update, status_code, event_details)
+                    update_ddb(event_arn, str_update, status_code, event_details, secrets)
         else:
             print("No events found in time frame, checking again in 1 minute.")
     else:
@@ -740,11 +740,10 @@ def main(event, context):
                 else:
                     # write to dynamoDB for persistence
                     update_org_ddb(event_arn, str_update, status_code, event_details, affected_org_accounts,
-                                   affected_org_entities, org_account_names)
+                                   affected_org_entities, org_account_names, secrets)
         else:
             print("No events found in time frame, checking again in 1 minute.")
 
 
 if __name__ == "__main__":
-    SECRETS = get_secrets()
     main('', '')
