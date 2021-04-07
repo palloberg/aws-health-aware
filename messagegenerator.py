@@ -26,7 +26,7 @@ def get_message_for_slack(event_details, event_type):
                             { "title": "Region", "value": event_details['successfulSet'][0]['event']['region'], "short": True },
                             { "title": "Start Time (UTC)", "value": cleanup_time(event_details['successfulSet'][0]['event']['startTime']), "short": True },
                             { "title": "Status", "value": event_details['successfulSet'][0]['event']['statusCode'], "short": True },
-                            { "title": "Event ARN", "value": event_details['successfulSet'][0]['event']['arn'], "short": False },                          
+                            { "title": "Event ARN", "value": event_details['successfulSet'][0]['event']['arn'], "short": False },
                             { "title": "Updates", "value": get_last_aws_update(event_details), "short": False }
                         ],
                 }
@@ -42,7 +42,7 @@ def get_message_for_slack(event_details, event_type):
             "text": summary,
             "attachments": [
                 {
-                    "color": "00ff00",
+                    "color": "good",
                         "fields": [
                             { "title": "Account(s)", "value": "All accounts\nin region", "short": True },
                             { "title": "Resource(s)", "value": "All resources\nin region", "short": True },
@@ -51,8 +51,7 @@ def get_message_for_slack(event_details, event_type):
                             { "title": "Start Time (UTC)", "value": cleanup_time(event_details['successfulSet'][0]['event']['startTime']), "short": True },
                             { "title": "End Time (UTC)", "value": cleanup_time(event_details['successfulSet'][0]['event']['endTime']), "short": True },
                             { "title": "Status", "value": event_details['successfulSet'][0]['event']['statusCode'], "short": True },
-                            { "title": "Event ARN", "value": event_details['successfulSet'][0]['event']['arn'], "short": False },                                
-                            { "title": "Updates", "value": get_last_aws_update(event_details), "short": False }
+                            { "title": "Event ARN", "value": event_details['successfulSet'][0]['event']['arn'], "short": False }
                         ],
                 }
             ]
@@ -188,7 +187,7 @@ def get_org_message_for_slack(event_details, event_type, affected_org_accounts, 
                             { "title": "Region", "value": event_details['successfulSet'][0]['event']['region'], "short": True },
                             { "title": "Start Time (UTC)", "value": cleanup_time(event_details['successfulSet'][0]['event']['startTime']), "short": True },
                             { "title": "Status", "value": event_details['successfulSet'][0]['event']['statusCode'], "short": True },
-                            { "title": "Event ARN", "value": event_details['successfulSet'][0]['event']['arn'], "short": False },                                  
+                            { "title": "Event ARN", "value": event_details['successfulSet'][0]['event']['arn'], "short": False },
                             { "title": "Updates", "value": get_last_aws_update(event_details), "short": False }
                         ],
                 }
@@ -204,7 +203,7 @@ def get_org_message_for_slack(event_details, event_type, affected_org_accounts, 
             "text": summary,
             "attachments": [
                 {
-                    "color": "00ff00",
+                    "color": "good",
                         "fields": [
                             { "title": "Account(s)", "value":  get_accounts_with_name(affected_org_accounts, org_account_names), "short": True },
                             { "title": "Resource(s)", "value": affected_org_entities, "short": True },
@@ -213,8 +212,7 @@ def get_org_message_for_slack(event_details, event_type, affected_org_accounts, 
                             { "title": "Start Time (UTC)", "value": cleanup_time(event_details['successfulSet'][0]['event']['startTime']), "short": True },
                             { "title": "End Time (UTC)", "value": cleanup_time(event_details['successfulSet'][0]['event']['endTime']), "short": True },
                             { "title": "Status", "value": event_details['successfulSet'][0]['event']['statusCode'], "short": True },
-                            { "title": "Event ARN", "value": event_details['successfulSet'][0]['event']['arn'], "short": False },                                
-                            { "title": "Updates", "value": get_last_aws_update(event_details), "short": False }
+                            { "title": "Event ARN", "value": event_details['successfulSet'][0]['event']['arn'], "short": False }
                         ],
                 }
             ]
@@ -234,10 +232,10 @@ def get_message_for_chime(event_details, event_type):
           "**Account(s)**: " + "All accounts in region" + "\n"
           "**Resource(s)**: " + "All resources in region" + "\n"
           "**Service**: " + event_details['successfulSet'][0]['event']['service'] + "\n"
-          "**Region**: " + event_details['successfulSet'][0]['event']['region'] + "\n" 
+          "**Region**: " + event_details['successfulSet'][0]['event']['region'] + "\n"
           "**Start Time (UTC)**: " + cleanup_time(event_details['successfulSet'][0]['event']['startTime']) + "\n"
           "**Status**: " + event_details['successfulSet'][0]['event']['statusCode'] + "\n"
-          "**Event ARN**: " + event_details['successfulSet'][0]['event']['arn'] + "\n"          
+          "**Event ARN**: " + event_details['successfulSet'][0]['event']['arn'] + "\n"
           "**Updates:**" + "\n" + get_last_aws_update(event_details)
           )
 
@@ -248,15 +246,15 @@ def get_message_for_chime(event_details, event_type):
           "**Account(s)**: " + "All accounts in region" + "\n"
           "**Resource(s)**: " + "All resources in region" + "\n"
           "**Service**: " + event_details['successfulSet'][0]['event']['service'] + "\n"
-          "**Region**: " + event_details['successfulSet'][0]['event']['region'] + "\n" 
+          "**Region**: " + event_details['successfulSet'][0]['event']['region'] + "\n"
           "**Start Time (UTC)**: " + cleanup_time(event_details['successfulSet'][0]['event']['startTime']) + "\n"
           "**End Time (UTC)**: " + cleanup_time(event_details['successfulSet'][0]['event']['endTime']) + "\n"
           "**Status**: " + event_details['successfulSet'][0]['event']['statusCode'] + "\n"
-          "**Event ARN**: " + event_details['successfulSet'][0]['event']['arn'] + "\n"             
+          "**Event ARN**: " + event_details['successfulSet'][0]['event']['arn'] + "\n"
           "**Updates:**" + "\n" + get_last_aws_update(event_details)
         )
     json.dumps(message)
-    print("Message sent to Chime: ", message)    
+    print("Message sent to Chime: ", message)
     return message
 
 
@@ -269,16 +267,16 @@ def get_org_message_for_chime(event_details, event_type, affected_org_accounts, 
         affected_org_entities = "All resources in region"
 
     if event_type == "create":
-        
+
         message = str("/md" + "\n" + "**:rotating_light:\[NEW\] AWS Health reported an issue with the " + event_details['successfulSet'][0]['event']['service'].upper()) +  " service in " + str(event_details['successfulSet'][0]['event']['region'].upper() + " region**" + "\n"
           "---" + "\n"
           "**Account(s)**: " +  get_accounts_with_name(affected_org_accounts, org_account_names) + "\n"
           "**Resource(s)**: " + affected_org_entities + "\n"
           "**Service**: " + event_details['successfulSet'][0]['event']['service'] + "\n"
-          "**Region**: " + event_details['successfulSet'][0]['event']['region'] + "\n" 
+          "**Region**: " + event_details['successfulSet'][0]['event']['region'] + "\n"
           "**Start Time (UTC)**: " + cleanup_time(event_details['successfulSet'][0]['event']['startTime']) + "\n"
           "**Status**: " + event_details['successfulSet'][0]['event']['statusCode'] + "\n"
-          "**Event ARN**: " + event_details['successfulSet'][0]['event']['arn'] + "\n"             
+          "**Event ARN**: " + event_details['successfulSet'][0]['event']['arn'] + "\n"
           "**Updates:**" + "\n" + get_last_aws_update(event_details)
         )
 
@@ -289,15 +287,15 @@ def get_org_message_for_chime(event_details, event_type, affected_org_accounts, 
           "**Account(s)**: " +  get_accounts_with_name(affected_org_accounts, org_account_names) + "\n"
           "**Resource(s)**: " + affected_org_entities + "\n"
           "**Service**: " + event_details['successfulSet'][0]['event']['service'] + "\n"
-          "**Region**: " + event_details['successfulSet'][0]['event']['region'] + "\n" 
+          "**Region**: " + event_details['successfulSet'][0]['event']['region'] + "\n"
           "**Start Time (UTC)**: " + cleanup_time(event_details['successfulSet'][0]['event']['startTime']) + "\n"
           "**End Time (UTC)**: " + cleanup_time(event_details['successfulSet'][0]['event']['endTime']) + "\n"
           "**Status**: " + event_details['successfulSet'][0]['event']['statusCode'] + "\n"
-          "**Event ARN**: " + event_details['successfulSet'][0]['event']['arn'] + "\n"             
+          "**Event ARN**: " + event_details['successfulSet'][0]['event']['arn'] + "\n"
           "**Updates:**" + "\n" + get_last_aws_update(event_details)
         )
     print("Message sent to Chime: ", message)
-    return message  
+    return message
 
 
 
@@ -439,9 +437,9 @@ def get_message_for_email(event_details, event_type):
                 <b>Resource(s):</b> All service related resources in region<br>
                 <b>Service:</b> {event_details['successfulSet'][0]['event']['service']}<br>
                 <b>Region:</b> {event_details['successfulSet'][0]['event']['region']}<br>
-                <b>Start Time (UTC):</b> {cleanup_time(event_details['successfulSet'][0]['event']['startTime'])}<br>                
+                <b>Start Time (UTC):</b> {cleanup_time(event_details['successfulSet'][0]['event']['startTime'])}<br>
                 <b>Status:</b> {event_details['successfulSet'][0]['event']['statusCode']}<br>
-                <b>Event ARN:</b> {event_details['successfulSet'][0]['event']['arn']}<br> 
+                <b>Event ARN:</b> {event_details['successfulSet'][0]['event']['arn']}<br>
                 <b>Updates:</b> {event_details['successfulSet'][0]['eventDescription']['latestDescription']}<br><br>
                 For updates, please visit the <a href=https://status.aws.amazon.com>AWS Service Health Dashboard</a><br>
                 If you are experiencing issues related to this event, please open an <a href=https://console.aws.amazon.com/support/home>AWS Support</a> case within your account.<br><br>
@@ -457,15 +455,15 @@ def get_message_for_email(event_details, event_type):
                 <h>Greetings again from AWS Health Aware,</h><br>
                 <p>Good news! The AWS Health incident from earlier has now been marked as resolved.<br><br>
                 <b>Account(s):</b> All accounts in region<br>
-                <b>Resource(s):</b>   All service related resources in region<br>                         
+                <b>Resource(s):</b>   All service related resources in region<br>
                 <b>Service:</b> {event_details['successfulSet'][0]['event']['service']}<br>
                 <b>Region:</b> {event_details['successfulSet'][0]['event']['region']}<br>
                 <b>Start Time (UTC):</b> {cleanup_time(event_details['successfulSet'][0]['event']['startTime'])}<br>
                 <b>End Time (UTC):</b> {cleanup_time(event_details['successfulSet'][0]['event']['endTime'])}<br>
-                <b>Status:</b> {event_details['successfulSet'][0]['event']['statusCode']}<br>                
-                <b>Event ARN:</b> {event_details['successfulSet'][0]['event']['arn']}<br>                
-                <b>Updates:</b> {event_details['successfulSet'][0]['eventDescription']['latestDescription']}<br><br>  
-                If you are still experiencing issues related to this event, please open an <a href=https://console.aws.amazon.com/support/home>AWS Support</a> case within your account.<br><br>                
+                <b>Status:</b> {event_details['successfulSet'][0]['event']['statusCode']}<br>
+                <b>Event ARN:</b> {event_details['successfulSet'][0]['event']['arn']}<br>
+                <br>
+                If you are still experiencing issues related to this event, please open an <a href=https://console.aws.amazon.com/support/home>AWS Support</a> case within your account.<br><br>
                 <br><br>
                 Thanks, <br><br>AHA: AWS Health Aware
                 </p>
@@ -480,7 +478,7 @@ def get_org_message_for_email(event_details, event_type, affected_org_accounts, 
     if len(affected_org_entities) >= 1:
         affected_org_entities = "\n".join(affected_org_entities)
     else:
-        affected_org_entities = "All servicess related resources in region"
+        affected_org_entities = "All services related resources in region"
 
     affected_accounts =  get_accounts_with_name(affected_org_accounts, org_account_names)
     if event_type == "create":
@@ -494,9 +492,9 @@ def get_org_message_for_email(event_details, event_type, affected_org_accounts, 
                 <b>Service:</b> {event_details['successfulSet'][0]['event']['service']}<br>
                 <b>Region:</b> {event_details['successfulSet'][0]['event']['region']}<br>
                 <b>Start Time (UTC):</b> {cleanup_time(event_details['successfulSet'][0]['event']['startTime'])}<br>
-                <b>Status:</b> {event_details['successfulSet'][0]['event']['statusCode']}<br>                
-                <b>Event ARN:</b> {event_details['successfulSet'][0]['event']['arn']}<br>                
-                <b>Updates:</b> {event_details['successfulSet'][0]['eventDescription']['latestDescription']}<br><br>                 
+                <b>Status:</b> {event_details['successfulSet'][0]['event']['statusCode']}<br>
+                <b>Event ARN:</b> {event_details['successfulSet'][0]['event']['arn']}<br>
+                <b>Updates:</b> {event_details['successfulSet'][0]['eventDescription']['latestDescription']}<br><br>
                 For updates, please visit the <a href=https://status.aws.amazon.com>AWS Service Health Dashboard</a><br>
                 If you are experiencing issues related to this event, please open an <a href=https://console.aws.amazon.com/support/home>AWS Support</a> case within your account.<br><br>
                 Thanks, <br><br>AHA: AWS Health Aware
@@ -509,17 +507,17 @@ def get_org_message_for_email(event_details, event_type, affected_org_accounts, 
         <html>
             <body>
                 <h>Greetings again from AWS Health Aware,</h><br>
-                <p>Good news! The AWS Health incident from earlier has now been marked as resolved.<br><br>
+                <p>Good news! The AWS Health incident from earlier has now been marked as <b>resolved</b>.<br><br>
                 <b>Account(s):</b> {affected_accounts}<br>
-                <b>Resource(s):</b> {affected_org_entities}<br>                            
+                <b>Resource(s):</b> {affected_org_entities}<br>
                 <b>Service:</b> {event_details['successfulSet'][0]['event']['service']}<br>
                 <b>Region:</b> {event_details['successfulSet'][0]['event']['region']}<br>
                 <b>Start Time (UTC):</b> {cleanup_time(event_details['successfulSet'][0]['event']['startTime'])}<br>
                 <b>End Time (UTC):</b> {cleanup_time(event_details['successfulSet'][0]['event']['endTime'])}<br>
-                <b>Status:</b> {event_details['successfulSet'][0]['event']['statusCode']}<br>                
+                <b>Status:</b> {event_details['successfulSet'][0]['event']['statusCode']}<br>
                 <b>Event ARN:</b> {event_details['successfulSet'][0]['event']['arn']}<br>
-                <b>Updates:</b> {event_details['successfulSet'][0]['eventDescription']['latestDescription']}<br><br>               
-                If you are still experiencing issues related to this event, please open an <a href=https://console.aws.amazon.com/support/home>AWS Support</a> case within your account.<br><br>                
+                <br>
+                If you are still experiencing issues related to this event, please open an <a href=https://console.aws.amazon.com/support/home>AWS Support</a> case within your account.<br><br>
                 Thanks, <br><br>AHA: AWS Health Aware
                 </p>
             </body>

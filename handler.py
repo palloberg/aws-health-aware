@@ -197,6 +197,10 @@ def send_to_teams(message, webhookurl):
 
 
 def send_email(event_details, eventType):
+    if eventType != "create":
+        print("Not sending e-mail for event type " + eventType)
+        return
+
     SENDER = os.environ['FROM_EMAIL']
     RECIPIENT = os.environ['TO_EMAIL'].split(",")
     #AWS_REGIONS = "us-east-1"
@@ -224,6 +228,10 @@ def send_email(event_details, eventType):
 
 
 def send_org_email(event_details, eventType, affected_org_accounts, affected_org_entities, org_account_names={}):
+    if eventType != "create":
+        print("Not sending e-mail for event type " + eventType)
+        return
+
     SENDER = os.environ['FROM_EMAIL']
     RECIPIENT = os.environ['TO_EMAIL'].split(",")
     #AWS_REGION = "us-east-1"
