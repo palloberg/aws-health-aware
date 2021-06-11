@@ -38,6 +38,11 @@ def get_message_for_slack(event_details, event_type):
             f":heavy_check_mark:*[RESOLVED] The AWS Health issue with the {event_details['successfulSet'][0]['event']['service'].upper()} service in "
             f"the {event_details['successfulSet'][0]['event']['region'].upper()} region is now resolved.*"
         )
+
+        update_message = get_last_aws_update(event_details)
+        if event_details['successfulSet'][0]['event']['eventTypeCategory'] == "scheduledChange":
+            update_message = "(suppressed)"
+
         message = {
             "text": summary,
             "attachments": [
@@ -51,7 +56,8 @@ def get_message_for_slack(event_details, event_type):
                             { "title": "Start Time (UTC)", "value": cleanup_time(event_details['successfulSet'][0]['event']['startTime']), "short": True },
                             { "title": "End Time (UTC)", "value": cleanup_time(event_details['successfulSet'][0]['event']['endTime']), "short": True },
                             { "title": "Status", "value": event_details['successfulSet'][0]['event']['statusCode'], "short": True },
-                            { "title": "Event ARN", "value": event_details['successfulSet'][0]['event']['arn'], "short": False }
+                            { "title": "Event ARN", "value": event_details['successfulSet'][0]['event']['arn'], "short": False },
+                            { "title": "Updates", "value": update_message, "short": False }
                         ],
                 }
             ]
@@ -100,7 +106,7 @@ def get_message_for_eventbridge(event_details, event_type):
     print("SHD Message generated for EventBridge : ", message)
     return message
 
-def get_accounts_with_name(affected_org_accounts, org_account_names=()):
+def get_accounts_with_name(affected_org_accounts, org_account_names=(), join_with="\n"):
     if len(affected_org_accounts) < 1:
         return "All accounts in region"
 
@@ -111,7 +117,7 @@ def get_accounts_with_name(affected_org_accounts, org_account_names=()):
         else:
             acctlist.append(acct)
 
-    return "\n".join(acctlist)
+    return join_with.join(acctlist)
 
 
 def get_org_message_for_eventbridge(event_details, event_type, affected_org_accounts, affected_org_entities, org_account_names=()):
@@ -199,6 +205,11 @@ def get_org_message_for_slack(event_details, event_type, affected_org_accounts, 
             f":heavy_check_mark:*[RESOLVED] The AWS Health issue with the {event_details['successfulSet'][0]['event']['service'].upper()} service in "
             f"the {event_details['successfulSet'][0]['event']['region'].upper()} region is now resolved.*"
         )
+
+        update_message = get_last_aws_update(event_details)
+        if event_details['successfulSet'][0]['event']['eventTypeCategory'] == "scheduledChange":
+            update_message = "(suppressed)"
+
         message = {
             "text": summary,
             "attachments": [
@@ -212,7 +223,8 @@ def get_org_message_for_slack(event_details, event_type, affected_org_accounts, 
                             { "title": "Start Time (UTC)", "value": cleanup_time(event_details['successfulSet'][0]['event']['startTime']), "short": True },
                             { "title": "End Time (UTC)", "value": cleanup_time(event_details['successfulSet'][0]['event']['endTime']), "short": True },
                             { "title": "Status", "value": event_details['successfulSet'][0]['event']['statusCode'], "short": True },
-                            { "title": "Event ARN", "value": event_details['successfulSet'][0]['event']['arn'], "short": False }
+                            { "title": "Event ARN", "value": event_details['successfulSet'][0]['event']['arn'], "short": False },
+                            { "title": "Updates", "value": update_message, "short": False }
                         ],
                 }
             ]
