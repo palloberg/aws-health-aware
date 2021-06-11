@@ -197,6 +197,10 @@ def send_to_teams(message, webhookurl):
 
 
 def send_email(event_details, eventType):
+    if event_details['successfulSet'][0]['event']['eventTypeCategory'] != "scheduledChange":
+        print("Not sending e-mail for event category " + event_details['successfulSet'][0]['event']['eventTypeCategory'])
+        return
+
     if eventType != "create":
         print("Not sending e-mail for event type " + eventType)
         return
@@ -232,6 +236,10 @@ def send_org_email(event_details, eventType, affected_org_accounts, affected_org
         print("Not sending e-mail for event type " + eventType)
         return
 
+    if event_details['successfulSet'][0]['event']['eventTypeCategory'] != "scheduledChange":
+        print("Not sending e-mail for event category " + event_details['successfulSet'][0]['event']['eventTypeCategory'])
+        return
+
     SENDER = os.environ['FROM_EMAIL']
     RECIPIENT = os.environ['TO_EMAIL'].split(",")
     #AWS_REGION = "us-east-1"
@@ -244,8 +252,10 @@ def send_org_email(event_details, eventType, affected_org_accounts, affected_org
         SUBJECT_ENTITIES = ", ".join(affected_org_entities)
     else:
         SUBJECT_ENTITIES = "all related resources"
-    if len(affected_org_accounts) >= 1:
-        SUBJECT_ACCOUNTS = get_accounts_with_name(affected_org_accounts, org_account_names)
+    if len(affected_org_accounts) == 1:
+        SUBJECT_ACCOUNTS = get_accounts_with_name(affected_org_accounts, org_account_names, join_with=", ")
+    elif len(affected_org_accounts) > 1:
+        SUBJECT_ACCOUNTS = "multiple accounts"
     else:
         SUBJECT_ACCOUNTS = "all accounts"
 
@@ -585,6 +595,11 @@ def describe_events():
         print("AHA will be monitoring events with event type categories as 'issue' only!")
         str_filter.update(event_type_filter)
 
+    if health_event_type == "scheduledChange":
+        event_type_filter = {'eventTypeCategories': ["scheduledChange"]}
+        print("AHA will be monitoring events with event type categories as 'scheduledChange' only!")
+        str_filter.update(event_type_filter)
+
     if dict_regions != "all regions":
         dict_regions = [region.strip() for region in dict_regions.split(',')]
         print("AHA will monitor for events only in the selected regions: ", dict_regions)
@@ -616,6 +631,11 @@ def describe_org_events():
     if health_event_type == "issue":
         event_type_filter = {'eventTypeCategories': ["issue"]}
         print("AHA will be monitoring events with event type categories as 'issue' only!")
+        str_filter.update(event_type_filter)
+
+    if health_event_type == "scheduledChange":
+        event_type_filter = {'eventTypeCategories': ["scheduledChange"]}
+        print("AHA will be monitoring events with event type categories as 'scheduledChange' only!")
         str_filter.update(event_type_filter)
 
     if dict_regions != "all regions":
